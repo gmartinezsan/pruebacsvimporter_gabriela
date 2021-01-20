@@ -68,9 +68,6 @@ namespace ImporterConsoleApp
             Log.Information("Building service provider");
             IServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
 
-            // Print connection string to demonstrate configuration object is populated
-            Console.WriteLine(configuration.GetConnectionString("BlobConnection"));
-
             try
             {
                 Log.Information("Starting service");
