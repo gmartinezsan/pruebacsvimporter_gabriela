@@ -1,0 +1,6 @@
+{
+    "IsEncrypted": false,
+    "ConnectionStrings": {      
+      "BlobConnection": "Some Value"
+    }
+  }
