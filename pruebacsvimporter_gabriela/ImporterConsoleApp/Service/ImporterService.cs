@@ -35,12 +35,12 @@ namespace ImporterConsoleApp
             string blobContainerName = "ContainerName";
             string fileName = "File with the data";
 
-            // Get a reference to a container named "sample-container" and then create it
+            // Get a reference to a container 
             BlobContainerClient container = new BlobContainerClient(connectionString, blobContainerName);
             container.Create();
             try
             {
-                // Get a reference to a blob named "sample-file"
+                // Get a reference to a blob 
                 BlobClient blob = container.GetBlobClient(fileName);
  
                 // Download the blob's contents and save it to a file locally
@@ -51,7 +51,7 @@ namespace ImporterConsoleApp
                 }
 
                 // Verify the contents
-                //Assert.AreEqual(SampleFileContent, File.ReadAllText(downloadPath));
+                //Assert.AreEqual(FileContent, File.ReadAllText(downloadPath));
             }
             finally
             {
