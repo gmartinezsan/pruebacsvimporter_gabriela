@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Data;
+using System.Data.Common;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -11,14 +13,14 @@ namespace ImporterConsoleApp
     class Program
     {
         public static IConfigurationRoot configuration;
+        private static DbProviderFactory _factory;
         
         private static void ConfigureServices(IServiceCollection serviceCollection)
         {
             // Add logging
             serviceCollection.AddSingleton(LoggerFactory.Create(builder =>
             {
-                builder
-                    .AddSerilog(dispose: true);
+                builder.AddSerilog(dispose: true);
             }));
 
             serviceCollection.AddLogging();
@@ -32,6 +34,12 @@ namespace ImporterConsoleApp
             // Add access to generic IConfigurationRoot
             serviceCollection.AddSingleton<IConfigurationRoot>(configuration);
 
+            // create db connection             
+            _factory = DbProviderFactories.GetFactory("settings.ProviderName");
+            var con = _factory.CreateConnection();
+            con.ConnectionString = "";            
+            serviceCollection.AddSingleton<IDbConnection>(con);
+        
             // Add app
             serviceCollection.AddTransient<ImporterService>();
         }
@@ -59,8 +67,7 @@ namespace ImporterConsoleApp
 
         static async Task MainAsync(string[] args)
         {
-            // Create service collection
-            Log.Information("Creating service collection");
+            // Create service collection            
             ServiceCollection serviceCollection = new ServiceCollection();
             ConfigureServices(serviceCollection);
 

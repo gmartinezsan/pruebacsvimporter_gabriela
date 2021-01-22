@@ -1,9 +1,11 @@
 using System;
-using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
+using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Sas;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -21,42 +23,84 @@ namespace ImporterConsoleApp
                 _config = config;
         }
 
+         /// <summary>
+        /// A method that creates a SAS token
+        /// A sas token can be shared with a customer or another service instead of using
+        /// the connection string which can be more risky.
+        // The token has an expiration time which has even more control to share the access.
+        /// </summary>
+        private Uri GetUriSasToken()
+        {
+            string storedPolicyName = null;
+            string connectionString = _config.GetConnectionString("BlobConnection");
+            BlobContainerClient containerClient = new BlobContainerClient(connectionString, "stock");
+
+            // Check whether this BlobContainerClient object has been authorized with Shared Key.
+            if (containerClient.CanGenerateSasUri)
+            {
+                // Create a SAS token that's valid for one hour.
+                BlobSasBuilder sasBuilder = new BlobSasBuilder()
+                {
+                    BlobContainerName = containerClient.Name,
+                    Resource = "c"
+                };
+
+                if (storedPolicyName == null)
+                {
+                    sasBuilder.ExpiresOn = DateTimeOffset.UtcNow.AddHours(1);
+                    sasBuilder.SetPermissions(BlobContainerSasPermissions.Read | BlobContainerSasPermissions.List);
+                }
+                else
+                {
+                    sasBuilder.Identifier = storedPolicyName;
+                }
+
+                Uri sasUri = containerClient.GenerateSasUri(sasBuilder);
+                return sasUri;
+            }
+            else
+            {
+                _logger.LogError(@"BlobContainerClient must be authorized with Shared Key credentials to create a service SAS.");
+                return null;
+            }
+                     
+        }
+
         public async Task Run()
         {
-            //TODO
+            await Download();
         }
 
 
-        public void Download()
-        {            
-            // Get a connection string to our Azure Storage account.
-            string connectionString = _config.GetConnectionString("BlobConnection");
-            string downloadPath = "Some path from the configuration";
-            string blobContainerName = "ContainerName";
-            string fileName = "File with the data";
-
-            // Get a reference to a container 
-            BlobContainerClient container = new BlobContainerClient(connectionString, blobContainerName);
-            container.Create();
+        /// <summary>
+        /// Gets a sas token to get the blob from the Azure Storage
+        /// and then downloads the content to a local file.
+        /// </summary>
+        public async Task Download()
+        {        
+            
+            BlobServiceClient blobServiceClient = new BlobServiceClient(GetUriSasToken(), null);
+            var blobName = _config.GetValue<string>("BlobName");
+            var containerName = _config.GetValue<string>("ContainerName");            
+            var fileName = _config.GetValue<string>("FileName");            
+            var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
             try
-            {
-                // Get a reference to a blob 
-                BlobClient blob = container.GetBlobClient(fileName);
- 
+            {               
+                BlobClient blob = containerClient.GetBlobClient(blobName); 
+                
                 // Download the blob's contents and save it to a file locally
-                BlobDownloadInfo download = blob.Download();
-                using (FileStream file = File.OpenWrite(downloadPath))
+                BlobDownloadInfo download = await blob.DownloadAsync();
+                
+                var dateTimeString = DateTime.Now.ToString("ddMMyyyy");
+                
+                using (FileStream file = File.OpenWrite($"./{fileName}-{dateTimeString}.csv"))
                 {
                     download.Content.CopyTo(file);
-                }
-
-                // Verify the contents
-                //Assert.AreEqual(FileContent, File.ReadAllText(downloadPath));
+                }                
             }
-            finally
+            catch(RequestFailedException ex)
             {
-                //TODO                
-                container.Delete();
+                _logger.LogError($"Cannot access blob in storage. Exception Message {ex.Message}");
             }
         }
 
