@@ -7,14 +7,16 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using ImporterConsoleApp.Data;
+using Microsoft.EntityFrameworkCore;
+
 
 namespace ImporterConsoleApp
 {
     class Program
     {
         public static IConfigurationRoot configuration;
-        private static DbProviderFactory _factory;
-        
+
         private static void ConfigureServices(IServiceCollection serviceCollection)
         {
             // Add logging
@@ -30,16 +32,13 @@ namespace ImporterConsoleApp
                 .SetBasePath(Directory.GetParent(AppContext.BaseDirectory).FullName)
                 .AddJsonFile("local.settings.json", false)
                 .Build();
+                
+            //Add connection factory
+            serviceCollection.AddSingleton<DbConnectionFactory>();
 
             // Add access to generic IConfigurationRoot
             serviceCollection.AddSingleton<IConfigurationRoot>(configuration);
-
-            // create db connection             
-            _factory = DbProviderFactories.GetFactory("settings.ProviderName");
-            var con = _factory.CreateConnection();
-            con.ConnectionString = "";            
-            serviceCollection.AddSingleton<IDbConnection>(con);
-        
+                    
             // Add app
             serviceCollection.AddTransient<ImporterService>();
         }
@@ -84,7 +83,6 @@ namespace ImporterConsoleApp
             catch (Exception ex)
             {
                 Log.Fatal(ex, "Error running service");
-                throw ex;
             }
             finally
             {
