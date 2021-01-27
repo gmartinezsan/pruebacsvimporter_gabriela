@@ -19,7 +19,7 @@ namespace ImporterConsoleApp.Data
         }
 
         public virtual DbSet<LogIngestion> LogIngestions { get; set; }
-        public virtual DbSet<Stock> Stocks { get; set; }
+        public virtual DbSet<StockEntity> Stocks { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {            
@@ -40,13 +40,11 @@ namespace ImporterConsoleApp.Data
                 entity.Property(e => e.IngestionTimestamp).HasColumnType("datetime");
             });
 
-            modelBuilder.Entity<Stock>(entity =>
+            modelBuilder.Entity<StockEntity>(entity =>
             {
-                entity.Property(e => e.Id).ValueGeneratedNever();
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
 
-                entity.Property(e => e.DateStock).HasColumnType("date");
-
-                entity.Property(e => e.LastUpdated).HasColumnType("datetime");
+                entity.Property(e => e.DateStock).HasColumnType("date");              
             });
 
             OnModelCreatingPartial(modelBuilder);

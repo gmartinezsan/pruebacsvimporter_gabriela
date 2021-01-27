@@ -5,12 +5,12 @@ using System.Collections.Generic;
 
 namespace ImporterConsoleApp.Models
 {
-    public partial class Stock
+    public partial class StockEntity
     {
         public Guid Id { get; set; }
-        public int PointOfSale { get; set; }
-        public int ProductId { get; set; }
+        public string PointOfSale { get; set; }
+        public string ProductId { get; set; }
         public DateTime DateStock { get; set; }
-        public DateTime? LastUpdated { get; set; }
+        public int Stock {get; set;}
     }
 }

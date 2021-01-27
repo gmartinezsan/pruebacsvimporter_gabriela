@@ -6,6 +6,7 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
+using ImporterConsoleApp.Data;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -16,11 +17,16 @@ namespace ImporterConsoleApp
 
         private readonly IConfigurationRoot _config;
         private readonly ILogger<ImporterService> _logger;
+        private readonly DbConnectionFactory _connectionFactory;
 
-        public ImporterService(IConfigurationRoot config, ILoggerFactory loggerFactory)
+        private string _localFileName;
+
+        public ImporterService(IConfigurationRoot config, ILoggerFactory loggerFactory, DbConnectionFactory connectionFactory)
         {
                 _logger = loggerFactory.CreateLogger<ImporterService>();
                 _config = config;
+                _connectionFactory = connectionFactory;
+                _localFileName = string.Empty;
         }
 
          /// <summary>
@@ -68,7 +74,11 @@ namespace ImporterConsoleApp
 
         public async Task Run()
         {
-            await Download();
+            await Download();    
+
+            var ingestion = new IngestionData(_connectionFactory.CreateSqlConnection(_config), _logger);
+            await ingestion.ExecuteIngestionAsync(_localFileName, false, _config.GetValue<string>("TableName"));
+
         }
 
 
@@ -92,8 +102,9 @@ namespace ImporterConsoleApp
                 BlobDownloadInfo download = await blob.DownloadAsync();
                 
                 var dateTimeString = DateTime.Now.ToString("ddMMyyyy");
+                _localFileName = $"{fileName}-{dateTimeString}.csv";
                 
-                using (FileStream file = File.OpenWrite($"./{fileName}-{dateTimeString}.csv"))
+                using (FileStream file = File.OpenWrite($"./{_localFileName}"))
                 {
                     download.Content.CopyTo(file);
                 }                

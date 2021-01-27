@@ -1,53 +1,100 @@
 using System;
 using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
+using CsvHelper;
+using CsvHelper.Configuration;
+using ImporterConsoleApp.Models;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 
 namespace ImporterConsoleApp.Data
 {
     public class IngestionData
     {
-
         private readonly SqlConnection _connection;    
-        public IngestionData(DbConnection connection)
-        {
-            _connection = connection as SqlConnection;            
-        }
 
-        public async Task ExecuteIngestionAsync(string pathAndFileName, bool cleanTable)
+        private readonly ILogger<ImporterService> _logger;
+        public IngestionData(DbConnection connection, ILogger<ImporterService> logger)
+        {
+            _connection = connection as SqlConnection;         
+            _logger = logger;   
+        }
+        public async Task ExecuteIngestionAsync(string pathAndFileName, bool cleanTable, string tableName)
         {
 
             using (_connection)
             {
-
                 await _connection.OpenAsync();
                 if (cleanTable)
                 {
-
+                    var cmd = new SqlCommand("Delete from Stocks");
+                    await cmd.ExecuteNonQueryAsync();
                 }  
-               var table = new DataTable();
-
-                // read the table structure from the database
-                using (var adapter = new SqlDataAdapter($"SELECT TOP 0 * FROM stock", _connection))
+  
+                using (var streamReader = new StreamReader(pathAndFileName))
                 {
-                    adapter.Fill(table);
-                };
+                    var confCsv = new CsvConfiguration(CultureInfo.CurrentCulture, delimiter: ";");                                                     
+                    using (var csvReader = new CsvReader(streamReader, confCsv))                            
+                    using (var csvDataReader = new CsvDataReader(csvReader))
+                    {                                                
+                        using (var bulkCopy = new SqlBulkCopy(_connection))
+                        {
+                            bulkCopy.DestinationTableName = tableName;
+                            bulkCopy.BulkCopyTimeout = 0;
+                           
+                            SqlBulkCopyColumnMapping mapPointOfSale = new SqlBulkCopyColumnMapping("PointOfSale", "PointOfSale");
+                            bulkCopy.ColumnMappings.Add(mapPointOfSale);
 
-                for (var i = 0; i < 100; i++)
-                {
-                    var row = table.NewRow();
-                    // add columns
-                    table.Rows.Add(row);
-                }
+                            SqlBulkCopyColumnMapping mapProduct = new SqlBulkCopyColumnMapping("Product", "Product");
+                            bulkCopy.ColumnMappings.Add(mapProduct);
 
-                using (var bulk = new SqlBulkCopy(_connection))
-                {
-                    bulk.DestinationTableName = "test";
-                    bulk.WriteToServer(table);
-                }
+                            SqlBulkCopyColumnMapping mapDate = new SqlBulkCopyColumnMapping("Date", "Date");
+                            bulkCopy.ColumnMappings.Add(mapDate);
+
+                            SqlBulkCopyColumnMapping mapStock = new SqlBulkCopyColumnMapping("Stock", "Stock");
+                            bulkCopy.ColumnMappings.Add(mapStock);
+
+                            try
+                            {                                
+                                await bulkCopy.WriteToServerAsync(csvDataReader);
+                            }
+                            catch (Exception e)
+                            {
+                                _logger.LogError(e, "Failed to ingest data to table {@TableName}", tableName);
+                            }
+                            finally
+                            {
+                                csvDataReader.Close();
+                                //TODO add number of rows
+                                await LogIngestionRow(1, 0, "No errors");
+                            }
+                        }
+                    }
+                }                                
             }
         }
+
+        public async Task LogIngestionRow(int finalState, long rowsIngested, string error)
+        {
+            var cmd = new SqlCommand("Insert into dbo.LogIngestion (IngestionTimestamp, FinalState, RowsIngested, Error) Values(@IngestionTimestamp, @FinalState, @RowsIngested, @Error)", _connection);
+            
+            //Parameters
+            cmd.Parameters.Add("@IngestionTimestamp", SqlDbType.DateTime);
+            cmd.Parameters.Add("@FinalState", SqlDbType.SmallInt);
+            cmd.Parameters.Add("@RowsIngested", SqlDbType.BigInt);
+            cmd.Parameters.Add("@Error", SqlDbType.VarChar);
+
+            //Values
+            cmd.Parameters["@IngestionTimestamp"].Value = DateTime.Now;
+            cmd.Parameters["@FinalState"].Value = finalState;
+            cmd.Parameters["@RowsIngested"].Value = rowsIngested;
+            cmd.Parameters["@Error"].Value = error;
+
+
+            await cmd.ExecuteNonQueryAsync();
+        }  
     }
 }
