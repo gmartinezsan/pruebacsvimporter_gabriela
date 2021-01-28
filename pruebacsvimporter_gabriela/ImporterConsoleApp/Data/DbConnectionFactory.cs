@@ -5,6 +5,10 @@ namespace ImporterConsoleApp.Data
 {
     public class DbConnectionFactory
     {
+
+        // <summary>        
+        // Creates the connection to the Sql Client.
+        /// </summary>
         public DbConnection CreateSqlConnection(IConfigurationRoot config)
         {
             var sqlClientFactory = SqlClientFactory.Instance;

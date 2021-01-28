@@ -16,3 +16,15 @@ Code exercise for data ingestion using .Net Core Framework.
 * Serilog library for logging.
 * CsvHelper library to read the csv file.
 * xUnit for unit testing.
+
+## How to Use it
+1. Install the Azure Storage Local Emulator
+2. Create a "stock" blob container
+3. Create a "data" folder inside the "stock" container
+4. Upload a csv file to the data folder as the source of the data
+5. Setup the configuration values at the local.settings.json file
+6. Create the "AcmeDB" database in your local sql server using the DatabaseScript/database.sql file
+7. Add the connection string for the database to the local.settings.json file
+8. Build the project and run the ImporterConsoleApp.
+9. Run the tests using dotnet test.
+

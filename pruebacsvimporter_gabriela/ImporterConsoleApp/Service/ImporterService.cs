@@ -35,7 +35,7 @@ namespace ImporterConsoleApp
         /// the connection string which can be more risky.
         // The token has an expiration time which has even more control to share the access.
         /// </summary>
-        private Uri GetUriSasToken()
+        public Uri GetUriSasToken()
         {
             string storedPolicyName = null;
             string connectionString = _config.GetConnectionString("BlobConnection");

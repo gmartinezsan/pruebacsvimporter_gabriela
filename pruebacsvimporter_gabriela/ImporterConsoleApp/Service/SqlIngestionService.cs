@@ -1,33 +1,31 @@
 using System.Data;
 using System.Data.Common;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace ImporterConsoleApp
 {
+    // <summary>
+    /// This class could be used to implement a service to ingest data     
+    // with Entity Framework.
+    /// </summary>
     public class SqlIngestionService 
     {
 
         private readonly IConfigurationRoot _config;
         private readonly ILogger<SqlIngestionService> _logger;
 
-        private readonly IDbConnection _dbConnection;
-
-        public SqlIngestionService(IConfigurationRoot config, ILoggerFactory loggerFactory, IDbConnection dbConnection)
+        public SqlIngestionService(IConfigurationRoot config, ILoggerFactory loggerFactory, DbContext AcmeDBContext)
         {
                 _logger = loggerFactory.CreateLogger<SqlIngestionService>();
-                _config = config;                
-                _dbConnection = dbConnection;
+                _config = config;                                
         }
 
-        public void IngestData(string fileName, string schemaFile)
+        public void IngestData(string fileName)
         {
-            // delete all the data existing in the table to ingest             
-            // TODO map the schema with the data in the csv file
-            // read the schema file and use it to create a dictionary of columns with types
-            // read each row from the file and make the casting to the type in the dictionary
-            // insert each row in the sql table            
+          
         }
 
     }

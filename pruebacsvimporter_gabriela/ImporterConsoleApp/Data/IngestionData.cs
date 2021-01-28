@@ -22,6 +22,12 @@ namespace ImporterConsoleApp.Data
             _connection = connection as SqlConnection;         
             _logger = logger;   
         }
+
+
+        // <summary>        
+        // Gets a csv file for ingesting the data 
+        // In Sql Server using SqlBulkCopy and a csvhelper for mapping the csv
+        /// </summary>
         public async Task ExecuteIngestionAsync(string pathAndFileName, bool cleanTable, string tableName)
         {
 
@@ -68,6 +74,7 @@ namespace ImporterConsoleApp.Data
                             finally
                             {
                                 csvDataReader.Close();
+
                                 //TODO add number of rows
                                 await LogIngestionRow(1, 0, "No errors");
                             }
@@ -77,6 +84,9 @@ namespace ImporterConsoleApp.Data
             }
         }
 
+        // <summary>
+        /// Adds a row to the Ingestion Log in the Sql Server Database                
+        /// </summary>
         public async Task LogIngestionRow(int finalState, long rowsIngested, string error)
         {
             var cmd = new SqlCommand("Insert into dbo.LogIngestion (IngestionTimestamp, FinalState, RowsIngested, Error) Values(@IngestionTimestamp, @FinalState, @RowsIngested, @Error)", _connection);
